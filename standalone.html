@@ -1,0 +1,12 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>标本分类助手（应急入口）</title><style>body{font-family:system-ui,sans-serif;padding:28px;color:#14532d}small{color:#6b7280}</style></head><body><h2>正在加载标本分类助手…</h2><small>应急入口不使用旧缓存。</small><script>
+(async()=>{
+ try{
+  let html=await (await fetch('./index.html?standalone='+Date.now(),{cache:'no-store'})).text();
+  html=html.replace("if('serviceWorker'in navigator)navigator.serviceWorker.register('./service-worker.js');","void 0;");
+  const scripts=['supabase-fetch-fix.js','cloud-sync.js','admin-permissions.js','admin-entry-gate.js','direct-classify.js'];
+  for(const f of scripts){if(!html.includes(f))html=html.replace('</body>',`<script src="./${f}?v=standalone1"></`+'script></body>');}
+  if(new URLSearchParams(location.search).get('admin')==='1')localStorage.setItem('specimen_admin_entry_visible_v1','1');
+  document.open();document.write(html);document.close();
+ }catch(e){document.body.innerHTML='<h2>加载失败</h2><p>请检查网络后刷新。错误：'+String(e)+'</p>';}
+})();
+</script></body></html>
