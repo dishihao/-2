@@ -168,3 +168,22 @@ grant execute on function public.verify_specimen_admin(text, text) to anon, auth
 grant execute on function public.get_specimen_classification_locks(text) to anon, authenticated;
 grant execute on function public.set_specimen_classification_lock(text, integer, boolean, text, bigint) to anon, authenticated;
 grant execute on function public.admin_reset_specimen_classification(text, text, bigint) to anon, authenticated;
+
+-- 立即刷新 Data API 的函数缓存，避免刚执行完脚本时出现 PGRST202 / 找不到函数。
+notify pgrst, 'reload schema';
+select pg_notification_queue_usage();
+
+-- 成功执行后，下面应返回 6 行。
+select p.proname
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname in (
+    'specimen_admin_exists',
+    'set_specimen_admin_once',
+    'verify_specimen_admin',
+    'get_specimen_classification_locks',
+    'set_specimen_classification_lock',
+    'admin_reset_specimen_classification'
+  )
+order by p.proname;
