@@ -227,6 +227,10 @@
 
   async function cloudSync(manual = false) {
     if (!configured() || cloudBusy || !navigator.onLine) return;
+    if (!Array.isArray(data) || data.length !== SPECIMEN_DATA.length) {
+      setTimeout(() => cloudSync(manual), 350);
+      return;
+    }
     cloudBusy = true;
     const cfg = cloudConfig();
 
