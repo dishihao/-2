@@ -1,59 +1,20 @@
 (() => {
   'use strict';
-  if (window.__specimenAdminReturnActionLoaded) return;
-  window.__specimenAdminReturnActionLoaded = true;
+  if (window.__specimenAdminReturnActionV2) return;
+  window.__specimenAdminReturnActionV2 = true;
 
-  function currentSpecimen() {
-    const id = Number(document.getElementById('editId')?.value || 0);
-    if (!id || typeof data === 'undefined' || !Array.isArray(data)) return null;
-    return data.find(x => Number(x.id) === id) || null;
-  }
-
-  function refresh() {
-    const mask = document.getElementById('editMask');
-    const button = document.getElementById('backBtn');
-    const specimen = currentSpecimen();
-    if (!mask || !button) return;
-
-    if (mask.classList.contains('show') && specimen?.classified) {
-      button.textContent = '管理员退回待分类';
-      button.style.setProperty('display', 'block', 'important');
-      button.style.setProperty('background', '#fff7ed');
-      button.style.setProperty('border-color', '#c2410c');
-      button.style.setProperty('color', '#9a3412');
-      button.style.setProperty('font-weight', '700');
-    } else {
-      button.style.setProperty('display', 'none', 'important');
+  // 待分类品种使用一键上架，不会打开编辑弹窗；因此编辑弹窗出现时
+  // 当前品种必然已经分类。只用 CSS 固定显示管理员退回按钮，
+  // 不再使用 MutationObserver 或定时轮询，避免页面反复重绘卡死。
+  const style = document.createElement('style');
+  style.textContent = `
+    #editMask.show #backBtn {
+      display: block !important;
+      background: #fff7ed !important;
+      border-color: #c2410c !important;
+      color: #9a3412 !important;
+      font-weight: 700 !important;
     }
-  }
-
-  function start() {
-    if (typeof edit !== 'function' || !document.getElementById('editMask')) {
-      setTimeout(start, 100);
-      return;
-    }
-
-    const previousEdit = edit;
-    edit = function (id) {
-      const result = previousEdit(id);
-      refresh();
-      setTimeout(refresh, 0);
-      setTimeout(refresh, 100);
-      setTimeout(refresh, 400);
-      return result;
-    };
-
-    const mask = document.getElementById('editMask');
-    new MutationObserver(refresh).observe(mask, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-    });
-
-    setInterval(() => {
-      if (mask.classList.contains('show')) refresh();
-    }, 300);
-  }
-
-  start();
+  `;
+  document.head.appendChild(style);
 })();
