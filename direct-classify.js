@@ -5,11 +5,6 @@
 
   const busyIds = new Set();
 
-  function isAdminEntry() {
-    return document.documentElement.classList.contains('specimen-admin-entry') ||
-      new URLSearchParams(location.search).get('admin') === '1';
-  }
-
   function install() {
     if (typeof edit !== 'function' || typeof classify !== 'function' || !Array.isArray(data) || typeof $ !== 'function') {
       setTimeout(install, 100);
@@ -22,16 +17,17 @@
       const specimen = data.find(x => Number(x.id) === Number(id));
       if (!specimen) return;
 
-      // 已分类品种仍可打开编辑页。管理员入口始终显示“退回待分类”，
-      // 未解锁时点击按钮会由权限模块要求输入管理员密码。
+      // 已分类品种可以打开详情页修改资料，并始终显示管理员退回入口。
+      // 点击退回时由权限模块验证管理员密码，普通用户无法执行。
       if (specimen.classified) {
         openEditor(id);
         const saveButton = document.querySelector('#editMask .savebtn');
         if (saveButton) saveButton.textContent = '保存修改';
         const backButton = document.getElementById('backBtn');
         if (backButton) {
-          backButton.textContent = '退回待分类';
-          backButton.style.display = isAdminEntry() ? 'block' : 'none';
+          backButton.textContent = '管理员退回待分类';
+          backButton.style.display = 'block';
+          backButton.setAttribute('aria-label', '管理员操作：退回待分类');
         }
         return;
       }
