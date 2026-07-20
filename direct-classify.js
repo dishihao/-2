@@ -1,32 +1,9 @@
 (() => {
   'use strict';
-  if (window.__specimenDirectClassifyLoadedV2) return;
-  window.__specimenDirectClassifyLoadedV2 = true;
+  if (window.__specimenDirectClassifyLoadedV3) return;
+  window.__specimenDirectClassifyLoadedV3 = true;
 
   const busyIds = new Set();
-
-  function currentSpecimen() {
-    const input = document.getElementById('editId');
-    if (!input || !Array.isArray(window.data || data)) return null;
-    const id = Number(input.value);
-    return data.find(x => Number(x.id) === id) || null;
-  }
-
-  function forceReturnButton() {
-    const mask = document.getElementById('editMask');
-    const button = document.getElementById('backBtn');
-    const specimen = currentSpecimen();
-    if (!mask || !button) return;
-
-    const shouldShow = mask.classList.contains('show') && specimen && specimen.classified;
-    if (shouldShow) {
-      button.textContent = '管理员退回待分类';
-      button.setAttribute('aria-label', '管理员操作：退回待分类');
-      button.style.setProperty('display', 'block', 'important');
-    } else {
-      button.style.removeProperty('display');
-    }
-  }
 
   function install() {
     if (typeof edit !== 'function' || typeof classify !== 'function' || !Array.isArray(data) || typeof $ !== 'function') {
@@ -40,58 +17,46 @@
       const specimen = data.find(x => Number(x.id) === Number(id));
       if (!specimen) return;
 
-      // 已分类品种打开详情页，并固定显示管理员退回入口。
-      // 真正执行退回时仍由权限模块校验管理员密码。
+      // 已分类品种打开详情页。退回按钮由管理员权限模块验证密码。
       if (specimen.classified) {
-        openEditor(id);
+        const result = openEditor(id);
         const saveButton = document.querySelector('#editMask .savebtn');
+        const backButton = document.getElementById('backBtn');
         if (saveButton) saveButton.textContent = '保存修改';
-        forceReturnButton();
-        setTimeout(forceReturnButton, 0);
-        setTimeout(forceReturnButton, 120);
-        setTimeout(forceReturnButton, 500);
-        return;
+        if (backButton) {
+          backButton.textContent = '管理员退回待分类';
+          backButton.style.display = 'block';
+        }
+        return result;
       }
 
-      // 待分类品种点击“分类上架”后立即完成。
-      if (busyIds.has(Number(id))) return;
-      busyIds.add(Number(id));
+      // 待分类品种点击一次即完成。不给页面增加观察器或轮询，避免卡死。
+      const numericId = Number(id);
+      if (busyIds.has(numericId)) return;
+      busyIds.add(numericId);
 
       $('editId').value = String(id);
       $('editCat').value = specimen.category || specimen.suggestedCategory || '';
       $('editLoc').value = specimen.location || '';
       $('editNote').value = specimen.note || '';
 
-      const result = classify();
+      let result;
+      try {
+        result = classify();
+      } catch (error) {
+        busyIds.delete(numericId);
+        console.error(error);
+        toast('分类上架失败，请重试');
+        return;
+      }
+
       Promise.resolve(result)
-        .then(() => toast('已直接分类上架'))
         .catch(error => {
           console.error(error);
-          toast('分类上架失败，请重试');
+          toast('已在本机保存，联网后会继续同步');
         })
-        .finally(() => busyIds.delete(Number(id)));
+        .finally(() => busyIds.delete(numericId));
     };
-
-    const mask = document.getElementById('editMask');
-    if (mask) {
-      new MutationObserver(() => {
-        const button = document.getElementById('backBtn');
-        const specimen = currentSpecimen();
-        if (mask.classList.contains('show') && specimen && specimen.classified && button && button.style.display !== 'block') {
-          forceReturnButton();
-        }
-      }).observe(mask, { attributes: true, childList: true, subtree: true });
-    }
-
-    document.addEventListener('click', event => {
-      const target = event.target && event.target.closest ? event.target.closest('#backBtn') : null;
-      if (target) setTimeout(forceReturnButton, 0);
-    });
-
-    setInterval(() => {
-      const maskNow = document.getElementById('editMask');
-      if (maskNow && maskNow.classList.contains('show')) forceReturnButton();
-    }, 500);
   }
 
   install();
