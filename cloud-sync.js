@@ -72,6 +72,7 @@
     return String(value || '').trim().replace(/\/+$/, '');
   }
 
+  // Keep the form current whenever the existing Data button opens the sheet.
   const oldOpenTools = openTools;
   openTools = function () {
     loadForm();
@@ -100,6 +101,7 @@
     toast('云同步已关闭');
   });
 
+  // ---------- Encryption ----------
   function bytesToB64(bytes) {
     let binary = '';
     for (let i = 0; i < bytes.length; i += 0x8000) {
@@ -165,6 +167,7 @@
     return JSON.parse(new TextDecoder().decode(plain));
   }
 
+  // ---------- Supabase RPC ----------
   async function rpc(functionName, body) {
     const cfg = cloudConfig();
     const response = await fetch(cfg.url + '/rest/v1/rpc/' + functionName, {
@@ -211,14 +214,27 @@
         return local;
       }
 
-      const localFields = JSON.stringify([local.category, local.location, local.note, local.classified]);
-      const remoteFields = JSON.stringify([
-        remote.category || '',
-        remote.location || '',
-        remote.note || '',
-        Boolean(remote.classified),
-      ]);
-      if (localFields !== remoteFields) localNewer = true;
+      const localValues = [local.category || '', local.location || '', local.note || '', Boolean(local.classified)];
+      const remoteValues = [remote.category || '', remote.location || '', remote.note || '', Boolean(remote.classified)];
+      const localFields = JSON.stringify(localValues);
+      const remoteFields = JSON.stringify(remoteValues);
+      if (localFields !== remoteFields) {
+        const score = values => (values[0] ? 2 : 0) + (values[1] ? 2 : 0) + (values[2] ? 1 : 0) + (values[3] ? 3 : 0);
+        const localScore = score(localValues);
+        const remoteScore = score(remoteValues);
+        if (remoteScore > localScore || (remoteScore === localScore && remoteFields > localFields)) {
+          remoteApplied = true;
+          return {
+            ...local,
+            category: remoteValues[0],
+            location: remoteValues[1],
+            note: remoteValues[2],
+            classified: remoteValues[3],
+            updatedAt: remoteTime,
+          };
+        }
+        localNewer = true;
+      }
       return local;
     });
 
@@ -303,6 +319,7 @@
     cloudTimer = setTimeout(() => cloudSync(false), 900);
   }
 
+  // Hook the existing local save routine, preserving all existing behavior.
   const originalPersist = persist;
   persist = async function (show = true) {
     await originalPersist(show);
