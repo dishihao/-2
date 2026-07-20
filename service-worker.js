@@ -1,4 +1,4 @@
-const C='specimen-v11-direct-classify';
+const C='specimen-v12-admin-return-fix';
 const A=['./','./index.html','./supabase-fetch-fix.js','./cloud-sync.js','./admin-permissions.js','./admin-entry-gate.js','./direct-classify.js','./data-01.js','./data-02.js','./data-03.js','./data-04.js','./data-05.js','./data-06.js','./data-07.js','./data-08.js','./data-09.js','./data-10.js','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(x=>x.addAll(A)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));
