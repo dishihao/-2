@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PoolX 借币套利计算器</title>
+  <style>
+    :root{--bg:#0b1020;--panel:#121a2f;--panel2:#17213b;--text:#eef3ff;--muted:#93a4c7;--line:#273552;--accent:#5b8cff;--good:#39d98a;--warn:#ffcc66;--bad:#ff6b7a;--shadow:0 18px 50px rgba(0,0,0,.25)}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#09101d,#0d1325 45%,#0a1020);color:var(--text);font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;line-height:1.45}
+    .wrap{max-width:1180px;margin:0 auto;padding:28px 18px 60px}.hero{display:flex;gap:18px;justify-content:space-between;align-items:flex-end;margin-bottom:20px}.hero h1{margin:0;font-size:clamp(26px,4vw,42px)}.hero p{margin:7px 0 0;color:var(--muted)}
+    .pill{padding:7px 11px;border:1px solid var(--line);background:#10182c;border-radius:999px;color:#b9c8e9;font-size:13px;white-space:nowrap}.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}@media(max-width:900px){.grid{grid-template-columns:1fr}.hero{align-items:flex-start;flex-direction:column}}
+    .card{background:rgba(18,26,47,.94);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}.card h2{font-size:17px;margin:0}.hd{padding:17px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.bd{padding:18px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}@media(max-width:560px){.formgrid{grid-template-columns:1fr}}
+    label{display:block;color:#b8c7e5;font-size:13px;margin-bottom:7px}.field{position:relative}input,select{width:100%;border:1px solid #30405f;background:#0d1528;color:var(--text);border-radius:11px;padding:11px 12px;font-size:15px;outline:none}input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,140,255,.14)}
+    .suffix{position:absolute;right:11px;bottom:11px;color:#788bac;font-size:12px;pointer-events:none}.section{margin-top:18px;padding-top:17px;border-top:1px dashed #2b3854}.section-title{font-size:14px;font-weight:700;margin-bottom:12px;color:#dce7ff}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}button{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--accent);color:white}button.secondary{background:#1a2642;color:#c9d7f4;border:1px solid #324362}.subtle{font-size:12px;color:var(--muted);margin-top:8px}
+    .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}@media(max-width:480px){.metrics{grid-template-columns:1fr}}.metric{background:var(--panel2);border:1px solid #2b3a59;border-radius:14px;padding:14px}.metric .k{color:#91a4c9;font-size:12px}.metric .v{font-size:22px;font-weight:800;margin-top:4px;word-break:break-word}.metric .s{font-size:12px;color:#8ea0c1;margin-top:3px}.v.good{color:var(--good)}.v.warn{color:var(--warn)}.v.bad{color:var(--bad)}
+    .barbox{margin-top:15px;background:#0c1426;border:1px solid #293957;border-radius:14px;padding:14px}.barrow{display:flex;justify-content:space-between;font-size:12px;color:#a8b8d8;margin-bottom:8px}.bar{height:12px;background:#202d47;border-radius:999px;overflow:hidden;position:relative}.fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#4f82ff,#7aa2ff);width:0}.marks{display:flex;justify-content:space-between;color:#7487aa;font-size:11px;margin-top:6px}
+    .table{width:100%;border-collapse:collapse;margin-top:10px}.table td{padding:10px 0;border-bottom:1px solid #24324d;font-size:13px}.table td:last-child{text-align:right;font-weight:700}.table tr:last-child td{border-bottom:0}.note{margin-top:15px;padding:12px 13px;border-radius:12px;background:#0e1930;border:1px solid #293a5c;color:#aec0e2;font-size:12px}
+    details{margin-top:14px;border:1px solid #2b3b5a;border-radius:13px;background:#0e172b}summary{cursor:pointer;padding:12px 14px;font-weight:700;color:#d9e5ff}.details-body{padding:0 14px 14px}.footer{margin-top:18px;color:#788bad;font-size:12px;text-align:center}.badge{font-size:12px;padding:5px 9px;border-radius:999px;border:1px solid #334666;background:#17243e;color:#c8d8f7}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div><h1>PoolX 借币套利计算器</h1><p>计算借币利息、PoolX 净收益、LTV 安全垫、自动还款与补抵押需求。</p></div>
+    <div class="pill">纯前端 · 数据仅保存在本机</div>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <div class="hd"><h2>输入参数</h2><span class="badge" id="pairBadge">BGB → XAUT</span></div>
+      <div class="bd">
+        <div class="formgrid">
+          <div><label>抵押币</label><select id="collateralAsset"></select></div>
+          <div><label>借入 / PoolX 锁仓币</label><select id="borrowAsset"></select></div>
+          <div class="field"><label>抵押数量</label><input id="collateralAmount" type="number" step="any" value="1326.576"><span class="suffix" id="cUnit1">BGB</span></div>
+          <div class="field"><label>抵押币价格</label><input id="collateralPrice" type="number" step="any" value="2.00"><span class="suffix">USDT</span></div>
+          <div class="field"><label>借币数量</label><input id="borrowAmount" type="number" step="any" value="0.4"><span class="suffix" id="bUnit1">XAUT</span></div>
+          <div class="field"><label>借入币价格</label><input id="borrowPrice" type="number" step="any" value="4186.85"><span class="suffix">USDT</span></div>
+          <div class="field"><label>借币 APR</label><input id="borrowApr" type="number" step="any" value="2.6192"><span class="suffix">%</span></div>
+          <div class="field"><label>PoolX 显示 APR</label><input id="poolApr" type="number" step="any" value="19.4889"><span class="suffix">%</span></div>
+          <div class="field"><label>活动天数</label><input id="days" type="number" step="any" value="7"><span class="suffix">天</span></div>
+          <div class="field"><label>奖励价值折扣</label><input id="rewardDiscount" type="number" step="any" value="100"><span class="suffix">%</span></div>
+        </div>
+        <div class="subtle">奖励是 USDT 可设 100%；奖励是波动较大的新币，可用 50%–90% 做保守估值。</div>
+
+        <div class="section">
+          <div class="section-title">LTV 与自动风控</div>
+          <div class="formgrid">
+            <div class="field"><label>补保线</label><input id="warningLtv" type="number" step="any" value="85"><span class="suffix">%</span></div>
+            <div class="field"><label>强平线</label><input id="liquidationLtv" type="number" step="any" value="91"><span class="suffix">%</span></div>
+            <div class="field"><label>目标开仓 LTV</label><input id="targetLtv" type="number" step="any" value="60"><span class="suffix">%</span></div>
+            <div class="field"><label>自动处理触发 LTV</label><input id="triggerLtv" type="number" step="any" value="75"><span class="suffix">%</span></div>
+          </div>
+        </div>
+
+        <details>
+          <summary>用矿池数据反算 PoolX APR（可选）</summary>
+          <div class="details-body">
+            <div class="formgrid">
+              <div class="field"><label>奖池奖励数量</label><input id="rewardTokens" type="number" step="any" placeholder="例如 45000"></div>
+              <div class="field"><label>奖励币价格</label><input id="rewardPrice" type="number" step="any" placeholder="例如 2.0"><span class="suffix">USDT</span></div>
+              <div class="field"><label>全池有效锁仓量</label><input id="poolLocked" type="number" step="any" placeholder="例如 5747"><span class="suffix" id="bUnit2">XAUT</span></div>
+              <div class="field"><label>你的有效锁仓倍数</label><input id="boost" type="number" step="any" value="1"><span class="suffix">×</span></div>
+            </div>
+            <button class="secondary" id="deriveApr" style="margin-top:12px">反算并写入 PoolX APR</button>
+            <div class="subtle">若页面“总锁仓量”未包含长期持仓加成，这里只能得到近似值。借来的币通常按 1× 计算。</div>
+          </div>
+        </details>
+
+        <div class="actions"><button id="calcBtn">重新计算</button><button class="secondary" id="saveBtn">保存当前参数</button><button class="secondary" id="resetBtn">恢复示例</button></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="hd"><h2>结果</h2><span class="badge" id="statusBadge">等待计算</span></div>
+      <div class="bd">
+        <div class="metrics">
+          <div class="metric"><div class="k">当前 LTV</div><div class="v" id="ltvOut">—</div><div class="s" id="ltvText">—</div></div>
+          <div class="metric"><div class="k">净年化利差</div><div class="v" id="spreadOut">—</div><div class="s">折价后的 PoolX APR − 借币 APR</div></div>
+          <div class="metric"><div class="k">本期预计净收益</div><div class="v" id="netOut">—</div><div class="s" id="netRoiOut">—</div></div>
+          <div class="metric"><div class="k">保本 PoolX 显示 APR</div><div class="v" id="breakevenOut">—</div><div class="s">忽略滑点及其他费用</div></div>
+        </div>
+
+        <div class="barbox">
+          <div class="barrow"><span>当前 LTV</span><span id="barLabel">—</span></div>
+          <div class="bar"><div class="fill" id="ltvBar"></div></div>
+          <div class="marks"><span>0%</span><span id="warnMark">补保 85%</span><span id="liqMark">强平 91%</span></div>
+        </div>
+
+        <table class="table">
+          <tr><td>抵押品价值</td><td id="collateralValueOut">—</td></tr>
+          <tr><td>借款价值</td><td id="debtValueOut">—</td></tr>
+          <tr><td>PoolX 毛收益（本期）</td><td id="grossOut">—</td></tr>
+          <tr><td>借币利息（本期）</td><td id="interestOut">—</td></tr>
+          <tr><td>到补保线可承受相对恶化</td><td id="warningShockOut">—</td></tr>
+          <tr><td>到强平线可承受相对恶化</td><td id="liqShockOut">—</td></tr>
+          <tr><td>借入币不变时的强平抵押币价</td><td id="collateralLiqPriceOut">—</td></tr>
+          <tr><td>抵押币不变时的强平借入币价</td><td id="borrowLiqPriceOut">—</td></tr>
+        </table>
+
+        <div class="section">
+          <div class="section-title">按目标 LTV 规划</div>
+          <table class="table">
+            <tr><td>目标 LTV 下最多可借</td><td id="maxBorrowOut">—</td></tr>
+            <tr><td>当前降到目标 LTV：需补抵押</td><td id="extraCollateralOut">—</td></tr>
+            <tr><td>当前降到目标 LTV：需还款</td><td id="repayNowOut">—</td></tr>
+            <tr><td>触发线 → 目标线：应还债务比例</td><td id="triggerRepayPctOut">—</td></tr>
+            <tr><td>触发线 → 目标线：需追加抵押比例</td><td id="triggerCollateralPctOut">—</td></tr>
+          </table>
+        </div>
+
+        <div class="note" id="noteOut">输入数据后自动计算。此工具不连接交易所，也不会自动下单。</div>
+      </div>
+    </section>
+  </div>
+  <div class="footer">仅用于估算与风险管理，不构成收益保证。实际结果受借币利率变化、PoolX 总锁仓变化、奖励币价格、手续费、滑点、解锁延迟及平台规则影响。</div>
+</div>
+
+<script>
+const ASSETS=['BTC','ETH','BGB','XAUT','XRP','SOL','USDT','USDC','OTHER'];
+const defaults={collateralAsset:'BGB',borrowAsset:'XAUT',collateralAmount:1326.576,collateralPrice:2,borrowAmount:.4,borrowPrice:4186.85,borrowApr:2.6192,poolApr:19.4889,days:7,rewardDiscount:100,warningLtv:85,liquidationLtv:91,targetLtv:60,triggerLtv:75,boost:1};
+const ids=['collateralAmount','collateralPrice','borrowAmount','borrowPrice','borrowApr','poolApr','days','rewardDiscount','warningLtv','liquidationLtv','targetLtv','triggerLtv','rewardTokens','rewardPrice','poolLocked','boost'];
+const $=id=>document.getElementById(id); const n=id=>Number($(id).value)||0;
+function initSelects(){for(const id of ['collateralAsset','borrowAsset']){const s=$(id); s.innerHTML=ASSETS.map(a=>`<option value="${a}">${a}</option>`).join('');} $('collateralAsset').value=defaults.collateralAsset;$('borrowAsset').value=defaults.borrowAsset;}
+function fmt(x,d=2){if(!Number.isFinite(x)) return '—';return x.toLocaleString('zh-CN',{maximumFractionDigits:d,minimumFractionDigits:d});}
+function money(x){return `${fmt(x,2)} USDT`}
+function pct(x,d=2){return `${fmt(x,d)}%`}
+function unitLabels(){const c=$('collateralAsset').value,b=$('borrowAsset').value;$('cUnit1').textContent=c;$('bUnit1').textContent=b;$('bUnit2').textContent=b;$('pairBadge').textContent=`${c} → ${b}`;}
+function classifyLtv(ltv,warn,liq){if(ltv>=liq)return['bad','已到/超过强平线'];if(ltv>=warn)return['bad','已到补保区'];if(ltv>=75)return['warn','接近风险区'];if(ltv>=65)return['warn','LTV 偏高'];if(ltv>=55)return['','中等 LTV'];return['good','低 LTV'];}
+function calc(){
+  unitLabels();
+  const cAmt=n('collateralAmount'),cPx=n('collateralPrice'),bAmt=n('borrowAmount'),bPx=n('borrowPrice');
+  const borrowApr=n('borrowApr'),poolApr=n('poolApr'),days=n('days'),discount=n('rewardDiscount')/100;
+  const warn=n('warningLtv'),liq=n('liquidationLtv'),target=n('targetLtv'),trigger=n('triggerLtv');
+  const cVal=cAmt*cPx,debt=bAmt*bPx,ltv=cVal>0?debt/cVal*100:NaN;
+  const effPoolApr=poolApr*discount,spread=effPoolApr-borrowApr;
+  const gross=debt*(effPoolApr/100)*(days/365),interest=debt*(borrowApr/100)*(days/365),net=gross-interest,roi=debt>0?net/debt*100:NaN;
+  const breakeven=discount>0?borrowApr/discount:Infinity;
+  const warningShock=ltv>0?(warn/ltv-1)*100:NaN,liqShock=ltv>0?(liq/ltv-1)*100:NaN;
+  const cLiqPx=(liq>0)?cPx*(ltv/liq):NaN,bLiqPx=(ltv>0)?bPx*(liq/ltv):NaN;
+  const maxBorrowQty=(bPx>0)?cVal*(target/100)/bPx:NaN;
+  const extraCollateralVal=(target>0)?Math.max(0,debt/(target/100)-cVal):NaN;
+  const extraCollateralQty=(cPx>0)?extraCollateralVal/cPx:NaN;
+  const repayVal=Math.max(0,debt-cVal*(target/100)),repayQty=bPx>0?repayVal/bPx:NaN;
+  const triggerRepayPct=(trigger>0)?Math.max(0,1-target/trigger)*100:NaN;
+  const triggerCollateralPct=(target>0)?Math.max(0,trigger/target-1)*100:NaN;
+
+  $('ltvOut').textContent=pct(ltv); $('spreadOut').textContent=pct(spread); $('netOut').textContent=money(net); $('netRoiOut').textContent=`本期借款本金回报 ${pct(roi,3)}`;$('breakevenOut').textContent=pct(breakeven);
+  $('collateralValueOut').textContent=money(cVal);$('debtValueOut').textContent=money(debt);$('grossOut').textContent=money(gross);$('interestOut').textContent=money(interest);
+  $('warningShockOut').textContent=pct(warningShock);$('liqShockOut').textContent=pct(liqShock);$('collateralLiqPriceOut').textContent=`${fmt(cLiqPx,6)} USDT`;$('borrowLiqPriceOut').textContent=`${fmt(bLiqPx,6)} USDT`;
+  $('maxBorrowOut').textContent=`${fmt(maxBorrowQty,8)} ${$('borrowAsset').value}`;
+  $('extraCollateralOut').textContent=extraCollateralVal>0?`${fmt(extraCollateralQty,8)} ${$('collateralAsset').value}（≈ ${money(extraCollateralVal)}）`:'无需追加';
+  $('repayNowOut').textContent=repayVal>0?`${fmt(repayQty,8)} ${$('borrowAsset').value}（≈ ${money(repayVal)}）`:'无需还款';
+  $('triggerRepayPctOut').textContent=pct(triggerRepayPct);$('triggerCollateralPctOut').textContent=pct(triggerCollateralPct);
+  $('warnMark').textContent=`补保 ${fmt(warn,0)}%`;$('liqMark').textContent=`强平 ${fmt(liq,0)}%`;$('barLabel').textContent=pct(ltv);
+  $('ltvBar').style.width=`${Math.max(0,Math.min(100,ltv/Math.max(liq,1)*100))}%`;
+  const [cls,label]=classifyLtv(ltv,warn,liq);$('statusBadge').textContent=label;$('ltvOut').className=`v ${cls}`;$('spreadOut').className=`v ${spread>0?'good':'bad'}`;$('netOut').className=`v ${net>0?'good':'bad'}`;
+  let note=`按当前输入，折价后 PoolX APR 为 ${pct(effPoolApr)}，借币 APR 为 ${pct(borrowApr)}，净年化利差 ${pct(spread)}。`;
+  if(spread<=0) note+=' 当前为负利差。'; else if(spread<5) note+=' 利差较薄，短期实际利润可能很小。'; else note+=' 利差为正，但仍需关注 PoolX APR 下滑与 LTV。';
+  if(ltv>=warn) note+=' 当前 LTV 已进入补保/高风险区域。';
+  $('noteOut').textContent=note;
+}
+function deriveApr(){const rewards=n('rewardTokens'),rPx=n('rewardPrice'),locked=n('poolLocked'),bPx=n('borrowPrice'),days=n('days');if(!(rewards>0&&rPx>0&&locked>0&&bPx>0&&days>0)){alert('请先填写奖池奖励数量、奖励币价格、全池有效锁仓量、借入币价格和活动天数。');return;}const apr=(rewards*rPx)/(locked*bPx)*(365/days)*100;$('poolApr').value=apr.toFixed(6);calc();}
+function save(){const data={collateralAsset:$('collateralAsset').value,borrowAsset:$('borrowAsset').value};ids.forEach(id=>data[id]=$(id).value);localStorage.setItem('poolxArbCalc',JSON.stringify(data));$('saveBtn').textContent='已保存';setTimeout(()=>$('saveBtn').textContent='保存当前参数',1200);}
+function load(){try{const data=JSON.parse(localStorage.getItem('poolxArbCalc')||'null');if(!data)return;for(const [k,v] of Object.entries(data)){if($(k))$(k).value=v;}}catch(e){}}
+function reset(){for(const [k,v] of Object.entries(defaults)){if($(k))$(k).value=v;}['rewardTokens','rewardPrice','poolLocked'].forEach(id=>$(id).value='');localStorage.removeItem('poolxArbCalc');calc();}
+initSelects();load();unitLabels();calc();
+['collateralAsset','borrowAsset',...ids].forEach(id=>$(id).addEventListener('input',calc));$('calcBtn').onclick=calc;$('deriveApr').onclick=deriveApr;$('saveBtn').onclick=save;$('resetBtn').onclick=reset;
+</script>
+</body>
+</html>
